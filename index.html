@@ -71,10 +71,11 @@ body{font-family:'Outfit',sans-serif;background:#060411;color:#faf7f2}
 /* ── SCREENS (form + loading + report) ── */
 .screen{
   position:fixed;inset:0;z-index:30;
-  display:none;align-items:center;justify-content:center;
-  padding:24px 20px;overflow-y:auto;
-  background:rgba(6,4,17,0.96);
+  display:none;align-items:flex-start;justify-content:center;
+  padding:0;overflow-y:auto;overflow-x:hidden;
+  background:rgba(6,4,17,0.97);
   backdrop-filter:blur(12px);
+  -webkit-overflow-scrolling:touch;
 }
 .screen.on{display:flex}
 
@@ -84,16 +85,41 @@ body{font-family:'Outfit',sans-serif;background:#060411;color:#faf7f2}
   background:rgba(255,255,255,0.03);
   border:1px solid rgba(200,164,90,0.22);
   border-radius:22px;padding:36px 30px 30px;
+  margin:auto;
 }
-@media(max-width:500px){.fbox{padding:26px 16px 22px}}
+@media(max-width:500px){
+  .fbox{
+    padding:20px 16px 32px;
+    border-radius:0;
+    border-left:none;border-right:none;
+    min-height:100dvh;
+    margin:0;
+  }
+}
 .fback{
   display:inline-flex;align-items:center;gap:6px;
-  font-size:12px;color:rgba(250,247,242,0.35);
+  font-size:13px;color:rgba(250,247,242,0.6);
   cursor:pointer;background:none;border:none;
-  font-family:'Outfit',sans-serif;margin-bottom:18px;padding:0;
+  font-family:'Outfit',sans-serif;
+  margin-bottom:18px;padding:6px 0;
   transition:color .2s;
+  -webkit-tap-highlight-color:transparent;
 }
-.fback:hover{color:#c8a45a}
+.fback:hover,.fback:active{color:#c8a45a}
+@media(max-width:500px){
+  .fback{
+    position:sticky;top:0;left:0;
+    background:rgba(6,4,17,0.9);
+    backdrop-filter:blur(8px);
+    width:100%;
+    padding:14px 0 10px;
+    margin-bottom:12px;
+    border-bottom:1px solid rgba(200,164,90,0.1);
+    z-index:10;
+    font-size:14px;
+    color:rgba(250,247,242,0.8);
+  }
+}
 .feyebrow{
   font-size:10px;font-weight:600;letter-spacing:.2em;
   text-transform:uppercase;color:#c8a45a;
@@ -140,7 +166,7 @@ body{font-family:'Outfit',sans-serif;background:#060411;color:#faf7f2}
 .btnsubmit:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(200,164,90,0.42)}
 
 /* LOADING */
-#sLoad{flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#sLoad{flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;}
 .orb{width:100px;height:100px;border-radius:50%;position:relative;margin-bottom:32px}
 .oring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(200,164,90,0.3);animation:ospin linear infinite}
 .oring:nth-child(1){animation-duration:3s}
@@ -268,8 +294,15 @@ var SPIN_SPEED = 0.00018;
 var baseR = 0;   // global — set in initNodes, read in draw
 
 function resize(){
-  W = cv.width  = window.innerWidth;
-  H = cv.height = window.innerHeight;
+  var dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  cv.width  = W * dpr;
+  cv.height = H * dpr;
+  cv.style.width  = W + 'px';
+  cv.style.height = H + 'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(dpr, dpr);
   initNodes();
 }
 
