@@ -17,7 +17,7 @@ body{font-family:'Outfit',sans-serif;background:#060411;color:#faf7f2}
 #heroText{
   position:fixed;top:0;left:0;right:0;z-index:5;
   display:flex;flex-direction:column;align-items:center;
-  padding-top:clamp(18px,3vh,36px);
+  padding-top:clamp(16px,4vh,40px);
   pointer-events:none;
   text-align:center;
 }
@@ -29,15 +29,15 @@ body{font-family:'Outfit',sans-serif;background:#060411;color:#faf7f2}
 .hero-eye::before,.hero-eye::after{content:'';display:block;width:28px;height:1px;background:#c8a45a;opacity:.4}
 .hero-title{
   font-family:'Cormorant Garamond',serif;
-  font-size:clamp(24px,3.8vw,44px);font-weight:300;line-height:1.05;
+  font-size:clamp(28px,6vw,48px);font-weight:300;line-height:1.05;
 }
 .hero-title em{font-style:italic;color:#e8d4a0}
 .hero-sub{
-  font-size:clamp(11px,1.4vw,13px);color:rgba(250,247,242,0.42);
+  font-size:clamp(12px,2.8vw,15px);color:rgba(250,247,242,0.42);
   font-weight:300;margin-top:6px;max-width:380px;line-height:1.55;
 }
 .hero-hint{
-  margin-top:10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  margin-top:8px;font-size:clamp(9px,2vw,11px);letter-spacing:.14em;text-transform:uppercase;
   color:rgba(250,247,242,0.22);
   animation:bob 2.5s ease-in-out infinite;
 }
@@ -279,17 +279,21 @@ function initNodes(){
   var total = SIGNS.length;
   var heroH = Math.min(H * 0.28, 200); // space reserved for hero
   var available = H - heroH;
-  baseR = Math.min(W * 0.36, available * 0.42);
+  var isMobile = W < 600;
+  baseR = isMobile
+    ? Math.min(W, available) * 0.40
+    : Math.min(W * 0.36, available * 0.42);
 
   for(var i=0; i<total; i++){
     var angle = (i / total) * Math.PI * 2;
     // stagger radii for organic feel
-    var r = baseR + (i%3 - 1) * (Math.min(W,H)*0.04);
+    var stagger = isMobile ? Math.min(W,H)*0.025 : Math.min(W,H)*0.04;
+    var r = baseR + (i%3 - 1) * stagger;
     nodes.push({
       idx: i,
       angle: angle,
       r: r,
-      size: Math.min(W,H) * 0.033,
+      size: Math.min(W,H) * 0.052,
       speed: SPIN_SPEED * (1 + (i%4)*0.15),
       selfAngle: Math.random() * Math.PI * 2,
       selfSpeed: 0.0008 + Math.random()*0.0006,
@@ -339,7 +343,8 @@ function draw(t){
     ctx.fillStyle='rgba(255,255,255,'+op.toFixed(3)+')'; ctx.fill();
   });
 
-  var heroOffset = Math.min(H*0.14, 110);
+  var isMob = W < 600;
+  var heroOffset = isMob ? Math.min(H*0.10, 70) : Math.min(H*0.14, 110);
   var cx=W/2, cy=H/2 + heroOffset;
 
   // orbit ring hint
@@ -392,7 +397,8 @@ function draw(t){
     var s = SIGNS[n.idx];
     var isHov = (n.idx === hovered);
     var pulse = .5+.5*Math.sin(t*.001*60+n.pulse);
-    var sz = n.size * (isHov ? 1.30 : 1);
+    var isTouchDev = W < 600;
+    var sz = n.size * (isHov ? (isTouchDev ? 1.20 : 1.30) : 1);
     var col = isHov ? s.ec : 'rgba(200,164,90,0.75)';
 
     // ── LAYER 1: glow + circle + label (NO rotation) ──
@@ -421,7 +427,7 @@ function draw(t){
     ctx.stroke();
 
     // name label — drawn here, NO rotation applied
-    ctx.font = (isHov ? '500 ' : '300 ') + Math.max(8, sz*0.26)+'px Outfit, sans-serif';
+    ctx.font = (isHov ? '500 ' : '300 ') + Math.max(10, sz*0.30)+'px Outfit, sans-serif';
     ctx.fillStyle = isHov ? '#e8d4a0' : 'rgba(250,247,242,0.42)';
     ctx.globalAlpha = isHov ? 1 : 0.7+pulse*0.15;
     ctx.textAlign='center'; ctx.textBaseline='top';
@@ -490,7 +496,7 @@ cv.addEventListener('touchstart', function(e){
   // update hovered manually
   nodes.forEach(function(n){
     var dx=mouse.x-n.x, dy=mouse.y-n.y;
-    if(Math.sqrt(dx*dx+dy*dy) < n.size*1.4) hovered=n.idx;
+    if(Math.sqrt(dx*dx+dy*dy) < n.size*1.8) hovered=n.idx;
   });
 }, {passive:true});
 
