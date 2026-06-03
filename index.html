@@ -3,951 +3,600 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AstralBlueprint — Your Blueprint</title>
+<title>AstralBlueprint — Discover Your Cosmic Reading</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:'Outfit',sans-serif;background:#0a0812;color:#faf7f2;overflow-x:hidden;min-height:100vh}
-#starsBg{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 20% 50%,#1a0a35 0%,#0a0812 60%)}
-#starsBg canvas{width:100%;height:100%}
-.screen{display:none;position:relative;z-index:1;min-height:100vh}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'Outfit',sans-serif;background:#060411;color:#faf7f2}
+
+/* ── CANVAS FILLS SCREEN ── */
+#cosmos{position:fixed;inset:0;z-index:0}
+
+/* ── HERO TEXT ── */
+#heroText{
+  position:fixed;top:0;left:0;right:0;z-index:5;
+  display:flex;flex-direction:column;align-items:center;
+  padding-top:clamp(18px,3vh,36px);
+  pointer-events:none;
+  text-align:center;
+}
+.hero-eye{
+  font-size:10px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+  color:#c8a45a;margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.hero-eye::before,.hero-eye::after{content:'';display:block;width:28px;height:1px;background:#c8a45a;opacity:.4}
+.hero-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(24px,3.8vw,44px);font-weight:300;line-height:1.05;
+}
+.hero-title em{font-style:italic;color:#e8d4a0}
+.hero-sub{
+  font-size:clamp(11px,1.4vw,13px);color:rgba(250,247,242,0.42);
+  font-weight:300;margin-top:6px;max-width:380px;line-height:1.55;
+}
+.hero-hint{
+  margin-top:10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(250,247,242,0.22);
+  animation:bob 2.5s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+
+/* ── TOOLTIP ── */
+#tooltip{
+  position:fixed;z-index:20;pointer-events:none;
+  background:rgba(10,8,20,0.92);
+  border:1px solid rgba(200,164,90,0.35);
+  border-radius:14px;padding:10px 16px;
+  text-align:center;
+  opacity:0;transform:translateY(6px);
+  transition:opacity .2s,transform .2s;
+  backdrop-filter:blur(8px);
+}
+#tooltip.show{opacity:1;transform:translateY(0)}
+#tooltip .tt-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:#e8d4a0}
+#tooltip .tt-dates{font-size:11px;color:rgba(250,247,242,0.4);margin-top:2px}
+#tooltip .tt-el{font-size:9px;letter-spacing:.15em;text-transform:uppercase;margin-top:3px}
+
+/* ── CLICK RIPPLE ── */
+.ripple{
+  position:fixed;border-radius:50%;
+  background:rgba(200,164,90,0.25);
+  pointer-events:none;z-index:15;
+  transform:scale(0);animation:ripple .6s ease-out forwards;
+}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+
+/* ── SCREENS (form + loading + report) ── */
+.screen{
+  position:fixed;inset:0;z-index:30;
+  display:none;align-items:center;justify-content:center;
+  padding:24px 20px;overflow-y:auto;
+  background:rgba(6,4,17,0.96);
+  backdrop-filter:blur(12px);
+}
 .screen.on{display:flex}
 
-/* ── API KEY SETUP ── */
-#sSetup{align-items:center;justify-content:center;padding:40px 20px}
-.setupbox{width:100%;max-width:460px;background:rgba(255,255,255,0.03);border:1px solid rgba(200,164,90,0.22);border-radius:22px;padding:38px 32px 32px}
-.setupbox h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:8px}
-.setupbox h2 em{font-style:italic;color:#e8d4a0}
-.setupbox p{font-size:13px;color:rgba(250,247,242,0.45);line-height:1.65;margin-bottom:22px}
-.setupbox a{color:#c8a45a;text-decoration:none}
-.apirow{display:flex;gap:8px;margin-bottom:10px}
-.apirow input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:12px 14px;font-family:'Outfit',sans-serif;font-size:13px;color:#faf7f2;outline:none}
-.apirow input:focus{border-color:rgba(200,164,90,0.5)}
-.apirow input::placeholder{color:rgba(250,247,242,0.2)}
-.btnapi{background:#c8a45a;color:#0a0812;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:12px 20px;border-radius:11px;border:none;cursor:pointer;white-space:nowrap;transition:transform .15s}
-.btnapi:hover{transform:scale(1.03)}
-.apierr{font-size:12px;color:#f87171;margin-top:6px;display:none}
-.apinote{font-size:11px;color:rgba(250,247,242,0.2);margin-top:10px;line-height:1.5}
-
-/* ── FORM ── */
-#sForm{align-items:center;justify-content:center;padding:40px 20px}
-.fbox{width:100%;max-width:460px;background:rgba(255,255,255,0.03);border:1px solid rgba(200,164,90,0.22);border-radius:22px;padding:38px 32px 32px}
-@media(max-width:500px){.fbox{padding:28px 18px 24px}}
-.feyebrow{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#c8a45a;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.feyebrow::before{content:'';display:block;width:22px;height:1px;background:#c8a45a;opacity:.5}
-.ftitle{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,5vw,34px);font-weight:300;line-height:1.15;margin-bottom:6px}
+/* FORM */
+.fbox{
+  width:100%;max-width:460px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(200,164,90,0.22);
+  border-radius:22px;padding:36px 30px 30px;
+}
+@media(max-width:500px){.fbox{padding:26px 16px 22px}}
+.fback{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;color:rgba(250,247,242,0.35);
+  cursor:pointer;background:none;border:none;
+  font-family:'Outfit',sans-serif;margin-bottom:18px;padding:0;
+  transition:color .2s;
+}
+.fback:hover{color:#c8a45a}
+.feyebrow{
+  font-size:10px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:#c8a45a;
+  margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.feyebrow::before{content:'';display:block;width:20px;height:1px;background:#c8a45a;opacity:.5}
+.sign-banner{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(200,164,90,0.08);
+  border:1px solid rgba(200,164,90,0.18);
+  border-radius:14px;padding:12px 16px;margin-bottom:20px;
+}
+.sb-svg{width:42px;height:42px;flex-shrink:0}
+.sb-svg svg{width:100%;height:100%}
+.sb-name{font-family:'Cormorant Garamond',serif;font-size:20px;color:#e8d4a0}
+.sb-dates{font-size:11px;color:rgba(250,247,242,0.32);margin-top:1px}
+.ftitle{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,4vw,30px);font-weight:300;line-height:1.15;margin-bottom:5px}
 .ftitle em{font-style:italic;color:#e8d4a0}
-.fsub{font-size:13px;color:rgba(250,247,242,0.38);line-height:1.6;margin-bottom:26px}
-.field{margin-bottom:15px}
-.field label{display:block;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,242,0.4);margin-bottom:6px}
-.field input,.field select{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 14px;font-family:'Outfit',sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .2s}
+.fsub{font-size:13px;color:rgba(250,247,242,0.36);line-height:1.6;margin-bottom:22px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,242,0.38);margin-bottom:5px}
+.field input,.field select{
+  width:100%;background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);border-radius:11px;
+  padding:11px 13px;font-family:'Outfit',sans-serif;
+  font-size:14px;color:#faf7f2;outline:none;
+  -webkit-appearance:none;appearance:none;
+  transition:border-color .2s,background .2s;
+}
 .field input:focus,.field select:focus{border-color:rgba(200,164,90,0.5);background:rgba(200,164,90,0.04)}
-.field input::placeholder{color:rgba(250,247,242,0.18)}
+.field input::placeholder{color:rgba(250,247,242,0.16)}
 .field select option{background:#1a0a35}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:400px){.row2{grid-template-columns:1fr}}
-.btnsubmit{width:100%;background:#c8a45a;color:#0a0812;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;padding:15px 24px;border-radius:50px;border:none;cursor:pointer;margin-top:6px;box-shadow:0 0 28px rgba(200,164,90,0.28);transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.tsel{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:11px 8px;font-family:'Outfit',sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none;width:100%}
+.btnsubmit{
+  width:100%;background:#c8a45a;color:#0a0812;
+  font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;
+  padding:14px 24px;border-radius:50px;border:none;cursor:pointer;
+  margin-top:6px;box-shadow:0 0 28px rgba(200,164,90,0.28);
+  transition:transform .2s,box-shadow .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
 .btnsubmit:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(200,164,90,0.42)}
-.fnote{text-align:center;font-size:11px;color:rgba(250,247,242,0.18);margin-top:12px}
 
-/* ── LOADING ── */
-#sLoad{flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
-.orb{width:110px;height:110px;border-radius:50%;position:relative;margin-bottom:36px}
+/* LOADING */
+#sLoad{flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.orb{width:100px;height:100px;border-radius:50%;position:relative;margin-bottom:32px}
 .oring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(200,164,90,0.3);animation:ospin linear infinite}
 .oring:nth-child(1){animation-duration:3s}
-.oring:nth-child(2){inset:12px;border-color:rgba(107,79,160,0.4);animation-duration:5s;animation-direction:reverse}
-.oring:nth-child(3){inset:24px;border-color:rgba(200,164,90,0.18);animation-duration:7s}
-.ocore{position:absolute;inset:34px;border-radius:50%;background:radial-gradient(circle,rgba(200,164,90,0.4),rgba(107,79,160,0.3));animation:opulse 2s ease-in-out infinite}
+.oring:nth-child(2){inset:11px;border-color:rgba(107,79,160,0.4);animation-duration:5s;animation-direction:reverse}
+.oring:nth-child(3){inset:22px;border-color:rgba(200,164,90,0.18);animation-duration:7s}
+.ocore{position:absolute;inset:32px;border-radius:50%;background:radial-gradient(circle,rgba(200,164,90,0.4),rgba(107,79,160,0.3));animation:opulse 2s ease-in-out infinite}
 @keyframes ospin{to{transform:rotate(360deg)}}
 @keyframes opulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.1);opacity:1}}
-.lname{font-family:'Cormorant Garamond',serif;font-size:clamp(20px,4vw,28px);font-weight:300;margin-bottom:8px}
+.lname{font-family:'Cormorant Garamond',serif;font-size:clamp(18px,4vw,26px);font-weight:300;margin-bottom:7px}
 .lname em{font-style:italic;color:#e8d4a0}
-.lstatus{font-size:13px;color:rgba(250,247,242,0.38);margin-bottom:32px;min-height:20px}
-.lsteps{display:flex;flex-direction:column;gap:9px;text-align:left;max-width:300px;width:100%}
-.lstep{display:flex;align-items:center;gap:11px;font-size:13px;color:rgba(250,247,242,0.25);transition:color .4s}
-.lstep.on{color:#faf7f2}
-.lstep.done{color:rgba(250,247,242,0.6)}
-.ldot{width:19px;height:19px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .4s}
+.lstatus{font-size:13px;color:rgba(250,247,242,0.36);margin-bottom:28px;min-height:20px}
+.lsteps{display:flex;flex-direction:column;gap:8px;text-align:left;max-width:290px;width:100%}
+.lstep{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(250,247,242,0.22);transition:color .4s}
+.lstep.on{color:#faf7f2}.lstep.done{color:rgba(250,247,242,0.55)}
+.ldot{width:18px;height:18px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .4s}
 .lstep.on .ldot{border-color:#c8a45a;animation:dspin 1.2s linear infinite}
 .lstep.done .ldot{background:#c8a45a;border-color:#c8a45a;color:#0a0812}
 @keyframes dspin{to{transform:rotate(360deg)}}
-.lbarwrap{width:100%;max-width:300px;margin-top:24px;height:3px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
+.lbarwrap{width:100%;max-width:290px;margin-top:20px;height:3px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
 .lbar{height:100%;width:0%;background:linear-gradient(90deg,#6b4fa0,#c8a45a);border-radius:3px;transition:width .7s ease}
-.lerr{margin-top:20px;max-width:340px;font-size:13px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:12px 16px;display:none;line-height:1.6}
-
-/* ── REPORT ── */
-#sReport{flex-direction:column;align-items:center;padding-bottom:80px}
-.rhdr{width:100%;padding:40px 20px 0;text-align:center;background:linear-gradient(180deg,rgba(61,43,107,0.32) 0%,transparent 100%)}
-.reyebrow{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#c8a45a;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:center}
-.reyebrow::before,.reyebrow::after{content:'';display:block;width:22px;height:1px;background:#c8a45a;opacity:.5}
-.rname{font-family:'Cormorant Garamond',serif;font-size:clamp(30px,6vw,54px);font-weight:300;line-height:1.08;margin-bottom:10px}
-.rname em{font-style:italic;color:#e8d4a0}
-.rmeta{font-size:13px;color:rgba(250,247,242,0.32);margin-bottom:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.pbadge{display:inline-flex;align-items:center;gap:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(200,164,90,0.28);border-radius:50px;padding:9px 20px 9px 12px;margin-bottom:28px}
-.pbicon{font-size:22px}
-.pblabel{font-size:10px;color:#c8a45a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
-.pbname{font-family:'Cormorant Garamond',serif;font-size:17px;color:#faf7f2}
-
-/* planets bar */
-.planets{width:100%;max-width:720px;padding:0 20px;margin-bottom:8px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
-.planets::-webkit-scrollbar{display:none}
-.planet{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:50px;padding:6px 14px;white-space:nowrap;font-size:12px;color:rgba(250,247,242,0.6);display:flex;align-items:center;gap:6px;flex-shrink:0}
-.planet span{font-size:14px}
-
-.sharebar{width:100%;max-width:720px;padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.sharelbl{font-size:12px;color:rgba(250,247,242,0.3)}
-.sbtn{display:inline-flex;align-items:center;gap:6px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;padding:7px 15px;border-radius:50px;border:none;cursor:pointer;transition:transform .15s}
-.sbtn:hover{transform:scale(1.04)}
-.stt{background:#111;color:#fff;border:1px solid rgba(255,255,255,0.1)}
-.scp{background:rgba(200,164,90,0.14);color:#c8a45a;border:1px solid rgba(200,164,90,0.28)}
-
-.rnav{width:100%;max-width:860px;padding:0 20px;display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:36px}
-.rnav::-webkit-scrollbar{display:none}
-.rtab{font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;padding:13px 16px;border:none;background:transparent;cursor:pointer;color:rgba(250,247,242,0.32);white-space:nowrap;letter-spacing:.02em;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s}
-.rtab:hover{color:rgba(250,247,242,0.65)}
-.rtab.on{color:#c8a45a;border-bottom-color:#c8a45a}
-
-.rcontent{width:100%;max-width:700px;padding:0 20px}
-.rsec{display:none}
-.rsec.on{display:block;animation:fin .35s ease}
-@keyframes fin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-.sechdr{display:flex;align-items:center;gap:13px;margin-bottom:26px;padding-bottom:18px;border-bottom:1px solid rgba(200,164,90,0.15)}
-.secico{font-size:26px}
-.seclbl{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#c8a45a;margin-bottom:2px}
-.sectit{font-family:'Cormorant Garamond',serif;font-size:clamp(20px,4vw,30px);font-weight:300;color:#faf7f2}
-.sectit em{font-style:italic;color:#e8d4a0}
-
-.prose{font-size:15px;line-height:1.88;color:rgba(250,247,242,0.68);font-weight:300}
-.prose p{margin-bottom:16px}
-.prose p:last-child{margin-bottom:0}
-.prose strong{color:#faf7f2;font-weight:500}
-
-.hbox{background:rgba(61,43,107,0.22);border:1px solid rgba(107,79,160,0.28);border-left:3px solid #6b4fa0;border-radius:0 12px 12px 0;padding:16px 18px;margin:20px 0;font-size:14px;color:rgba(250,247,242,0.62);line-height:1.7}
-.hbox strong{color:#e8d4a0}
-
-.icard{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 20px;margin:18px 0}
-.iclbl{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:rgba(250,247,242,0.3);margin-bottom:7px}
-.ictxt{font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic;font-weight:300;color:rgba(250,247,242,0.78);line-height:1.6}
-
-.secnav{display:flex;justify-content:space-between;align-items:center;margin-top:36px;padding-top:22px;border-top:1px solid rgba(200,164,90,0.15)}
-.sarrow{display:flex;align-items:center;gap:7px;font-size:13px;color:rgba(250,247,242,0.36);background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50px;padding:8px 16px;cursor:pointer;font-family:'Outfit',sans-serif;transition:color .2s,border-color .2s}
-.sarrow:hover{color:#c8a45a;border-color:rgba(200,164,90,0.3)}
-.sarrow:disabled{opacity:.18;cursor:default}
-
-.nudge{background:linear-gradient(135deg,rgba(61,43,107,0.38),rgba(10,8,18,0.8));border:1px solid rgba(200,164,90,0.22);border-radius:15px;padding:20px 22px;margin-top:32px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.nudgetit{font-size:14px;font-weight:500;color:#faf7f2;margin-bottom:3px}
-.nudgedsc{font-size:12px;color:rgba(250,247,242,0.38);line-height:1.5;flex:1}
-.nudgebtn{background:#c8a45a;color:#0a0812;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:10px 20px;border-radius:50px;border:none;cursor:pointer;white-space:nowrap;transition:transform .15s}
-.nudgebtn:hover{transform:scale(1.03)}
-
-/* ══ COMPAT FORM ══ */
-#sCompatForm{align-items:center;justify-content:center;padding:40px 20px;flex-direction:column}
-.compat-header{text-align:center;margin-bottom:32px}
-.compat-header h2{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,5vw,42px);font-weight:300;line-height:1.1;margin-bottom:8px}
-.compat-header h2 em{font-style:italic;color:#e8d4a0}
-.compat-header p{font-size:14px;color:rgba(250,247,242,0.4);line-height:1.6;max-width:460px}
-.compat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:760px}
-@media(max-width:620px){.compat-grid{grid-template-columns:1fr}}
-.person-box{background:rgba(255,255,255,0.03);border:1px solid rgba(200,164,90,0.18);border-radius:18px;padding:26px 22px}
-.person-title{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.pt1{color:#c8a45a}
-.pt2{color:#9b7fe8}
-.compat-vs{display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:rgba(250,247,242,0.2);padding:0 4px;align-self:center}
-@media(max-width:620px){.compat-vs{display:none}}
-.btncompat{width:100%;max-width:760px;background:linear-gradient(135deg,#c8a45a,#9b7fe8);color:#0a0812;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;padding:16px 24px;border-radius:50px;border:none;cursor:pointer;margin-top:16px;box-shadow:0 0 32px rgba(200,164,90,0.25);transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;gap:10px}
-.btncompat:hover{transform:translateY(-2px);box-shadow:0 8px 40px rgba(155,127,232,0.35)}
-
-/* ══ COMPAT RESULT ══ */
-#sCompatResult{flex-direction:column;align-items:center;padding-bottom:80px}
-.compat-result-hdr{width:100%;max-width:720px;padding:40px 20px 0;text-align:center}
-.compat-names{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,4vw,36px);font-weight:300;line-height:1.2;margin-bottom:16px}
-.compat-names em{font-style:italic;color:#e8d4a0}
-.score-circle-wrap{display:flex;justify-content:center;margin:24px 0 8px}
-.score-circle{width:130px;height:130px;border-radius:50%;border:2px solid rgba(200,164,90,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(61,43,107,0.25);position:relative}
-.score-circle::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(155,127,232,0.15)}
-.score-num{font-family:'Cormorant Garamond',serif;font-size:54px;font-weight:300;color:#e8d4a0;line-height:1}
-.score-lbl{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(250,247,242,0.35);margin-top:2px}
-.score-verdict{font-size:15px;color:rgba(250,247,242,0.55);margin-bottom:32px;font-family:'Cormorant Garamond',serif;font-style:italic}
-.compat-tabs{width:100%;max-width:720px;padding:0 20px;display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:32px}
-.compat-tabs::-webkit-scrollbar{display:none}
-.ctab{font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;padding:12px 16px;border:none;background:transparent;cursor:pointer;color:rgba(250,247,242,0.32);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s}
-.ctab:hover{color:rgba(250,247,242,0.65)}
-.ctab.on{color:#c8a45a;border-bottom-color:#c8a45a}
-.compat-content{width:100%;max-width:700px;padding:0 20px}
-.csec{display:none}
-.csec.on{display:block;animation:fin .35s ease}
-.planet-row{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
-.planet-row:last-child{border-bottom:none}
-.planet-ico{font-size:20px;flex-shrink:0;width:28px;text-align:center;margin-top:2px}
-.planet-body{flex:1}
-.planet-name{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#c8a45a;margin-bottom:4px}
-.planet-signs{font-size:13px;color:rgba(250,247,242,0.65);margin-bottom:5px}
-.planet-signs strong{color:#faf7f2}
-.planet-desc{font-size:13px;color:rgba(250,247,242,0.42);line-height:1.6}
-.planet-score{flex-shrink:0;text-align:right}
-.pscore-num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300}
-.pscore-lbl{font-size:10px;color:rgba(250,247,242,0.3)}
-.harmony{color:#4ade80}
-.tension{color:#f87171}
-.neutral{color:#e8d4a0}
-.conflict-box{background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.18);border-left:3px solid #f87171;border-radius:0 12px 12px 0;padding:16px 18px;margin:12px 0}
-.conflict-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#f87171;margin-bottom:6px}
-.conflict-text{font-size:13px;color:rgba(250,247,242,0.55);line-height:1.65}
-.strength-box{background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-left:3px solid #4ade80;border-radius:0 12px 12px 0;padding:16px 18px;margin:12px 0}
-.strength-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;margin-bottom:6px}
-.strength-text{font-size:13px;color:rgba(250,247,242,0.55);line-height:1.65}
-.back-btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:rgba(250,247,242,0.36);background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50px;padding:9px 18px;cursor:pointer;font-family:'Outfit',sans-serif;margin:32px 0 0;transition:color .2s,border-color .2s}
-.back-btn:hover{color:#c8a45a;border-color:rgba(200,164,90,0.3)}
+.lerr{margin-top:18px;max-width:320px;font-size:13px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:11px 15px;display:none;line-height:1.6}
 </style>
 </head>
 <body>
 
-<div id="starsBg"><canvas id="sc"></canvas></div>
+<canvas id="cosmos"></canvas>
 
-<!-- ══ SCREEN 0: API KEY SETUP ══ -->
-<div id="sSetup" class="screen" style="display:none!important">
-  <div class="setupbox">
-    <div class="feyebrow">Configuração única</div>
-    <h2>Insira sua<br><em>chave da API</em></h2>
-    <p>Esta chave conecta o sistema à inteligência que calcula o mapa astral real de cada pessoa. Você só precisa inserir uma vez — fica salva no seu navegador.<br><br>
-    Obtenha sua chave gratuita em: <a href="https://console.anthropic.com/keys" target="_blank">console.anthropic.com/keys</a></p>
-    <div class="apirow">
-      <input type="password" id="iApiKey" placeholder="sk-ant-api03-..." autocomplete="off">
-      <button class="btnapi" id="btnSaveKey">Salvar</button>
-    </div>
-    <div class="apierr" id="apiErr">Chave inválida. Deve começar com sk-ant-</div>
-    <p class="apinote">🔒 A chave fica salva apenas no seu navegador (localStorage). Nunca é enviada a nenhum servidor além da API da Anthropic.</p>
-  </div>
+<div id="heroText">
+  <div class="hero-eye">Personalized Cosmic Reading</div>
+  <div class="hero-title">Astral<em>Blueprint</em></div>
+  <p class="hero-sub">The stars wrote something about you the moment you were born.<br>Click your sign to begin.</p>
+  <div class="hero-hint">↓ click your sign</div>
 </div>
 
-<!-- ══ SCREEN 1: FORM ══ -->
+<div id="tooltip">
+  <div class="tt-name" id="ttName">Aries</div>
+  <div class="tt-dates" id="ttDates">Mar 21 – Apr 19</div>
+  <div class="tt-el" id="ttEl">Fire</div>
+</div>
+
+<!-- FORM -->
 <div id="sForm" class="screen">
   <div class="fbox">
-    <div class="feyebrow">Your Astral Blueprint</div>
+    <button class="fback" id="btnBack">← Back to signs</button>
+    <div class="feyebrow">Your Cosmic Blueprint</div>
+    <div class="sign-banner">
+      <div class="sb-svg" id="sbSvg"></div>
+      <div>
+        <div class="sb-name" id="sbName">—</div>
+        <div class="sb-dates" id="sbDates">—</div>
+      </div>
+    </div>
     <div class="ftitle">Tell the stars<br>who you <em>are.</em></div>
-    <p class="fsub">Enter your birth details. The cosmos will calculate your exact planetary map and write your personalized reading.</p>
-    <div class="field">
-      <label>Your First Name</label>
-      <input type="text" id="iName" placeholder="e.g. Sofia">
-    </div>
-    <div class="field">
-      <label>Date of Birth</label>
-      <input type="text" id="iDob" placeholder="MM/DD/YYYY" maxlength="10" oninput="fmtDateInput(this)">
-    </div>
+    <p class="fsub">Enter your birth details for a reading written by your exact chart.</p>
+    <div class="field"><label>Your First Name</label><input type="text" id="iName" placeholder="e.g. Sofia"></div>
+    <div class="field"><label>Date of Birth</label><input type="text" id="iDob" placeholder="MM/DD/YYYY" maxlength="10" oninput="fmtDate(this)"></div>
     <div class="row2">
       <div class="field">
-        <label>Birth Time</label>
-        <div style="display:flex;gap:6px;align-items:center"><select id="iTimeH" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="">HH</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><span style="color:rgba(250,247,242,0.3);font-size:16px">:</span><select id="iTimeM" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="">MM</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select><select id="iTimeP" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="AM">AM</option><option value="PM">PM</option></select></div>
-      </div>
-      <div class="field">
-        <label>How precise?</label>
-        <select id="iPrec">
-          <option value="exact">Exact time</option>
-          <option value="morning">Morning (~9am)</option>
-          <option value="afternoon">Afternoon (~3pm)</option>
-          <option value="evening">Evening (~8pm)</option>
-          <option value="unknown">Don't know (noon)</option>
+        <label>Birth Hour</label>
+        <select id="iTH">
+          <option value="">HH</option>
+          <option>01</option><option>02</option><option>03</option><option>04</option>
+          <option>05</option><option>06</option><option>07</option><option>08</option>
+          <option>09</option><option>10</option><option>11</option><option>12</option>
         </select>
       </div>
+      <div class="field">
+        <label>Min · AM/PM</label>
+        <div style="display:flex;gap:5px">
+          <select id="iTM" class="tsel"><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
+          <select id="iTP" class="tsel"><option>AM</option><option>PM</option></select>
+        </div>
+      </div>
     </div>
-    <div class="field">
-      <label>City &amp; Country of Birth</label>
-      <input type="text" id="iCity" placeholder="e.g. New York, NY">
-    </div>
-    <div class="field">
-      <label>Your Cosmic Profile (from quiz)</label>
-      <select id="iProfile">
-        <option value="solar">🔥 The Solar Sovereign</option>
-        <option value="tide">🌊 The Deep Tide</option>
-        <option value="wanderer">🌪 The Cosmic Wanderer</option>
-        <option value="architect">🌿 The Sacred Architect</option>
-        <option value="oracle">🌙 The Midnight Oracle</option>
-      </select>
-    </div>
+    <div class="field"><label>City &amp; Country of Birth</label><input type="text" id="iCity" placeholder="e.g. New York, NY"></div>
     <button class="btnsubmit" id="btnGo">
       Channel My Reading
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
-
   </div>
 </div>
 
-<!-- ══ SCREEN 2: LOADING ══ -->
+<!-- LOADING -->
 <div id="sLoad" class="screen">
-  <div class="orb">
-    <div class="oring"></div><div class="oring"></div>
-    <div class="oring"></div><div class="ocore"></div>
-  </div>
-  <div class="lname">Reading <em id="lNameTxt">your</em> stars…</div>
-  <div class="lstatus" id="lStatus">Calculating planetary positions…</div>
+  <div class="orb"><div class="oring"></div><div class="oring"></div><div class="oring"></div><div class="ocore"></div></div>
+  <div class="lname">Reading <em id="lTxt">your</em> stars…</div>
+  <div class="lstatus" id="lSt">Calculating planetary positions…</div>
   <div class="lsteps">
     <div class="lstep on" id="ls1"><div class="ldot">◌</div>Calculating your exact birth chart</div>
     <div class="lstep"    id="ls2"><div class="ldot">◌</div>Identifying Sun, Moon &amp; Rising</div>
     <div class="lstep"    id="ls3"><div class="ldot">◌</div>Reading all 10 planetary positions</div>
     <div class="lstep"    id="ls4"><div class="ldot">◌</div>Channeling your cosmic reading</div>
-    <div class="lstep"    id="ls5"><div class="ldot">◌</div>Composing your 47-page blueprint</div>
+    <div class="lstep"    id="ls5"><div class="ldot">◌</div>Composing your blueprint</div>
   </div>
   <div class="lbarwrap"><div class="lbar" id="lBar"></div></div>
   <div class="lerr" id="lErr"></div>
 </div>
 
-<!-- ══ SCREEN 3: REPORT ══ -->
-<div id="sReport" class="screen">
-  <div class="rhdr">
-    <div class="reyebrow">Astral Blueprint</div>
-    <div class="rname">The Stars Have Spoken,<br><em id="rName">—</em></div>
-    <div class="rmeta">
-      <span>🌞 <span id="rSun">—</span></span>
-      <span>🌙 <span id="rMoon">—</span></span>
-      <span>⬆️ <span id="rRising">—</span></span>
-      <span>♀️ <span id="rVenus">—</span></span>
-      <span>♂️ <span id="rMars">—</span></span>
-    </div>
-    <div class="pbadge">
-      <div class="pbicon" id="rPIcon">⭐</div>
-      <div>
-        <div class="pblabel">Cosmic Profile</div>
-        <div class="pbname" id="rPName">—</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="planets" id="planetsBar"></div>
-
-  <div class="sharebar">
-    <span class="sharelbl">Share your profile:</span>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="sbtn stt" id="btnTT">♪ TikTok</button>
-      <button class="sbtn scp" id="btnCP">🔗 Copy link</button>
-    </div>
-  </div>
-
-  <nav class="rnav" id="rnav">
-    <button class="rtab on" data-sec="personality">🪐 Personality</button>
-    <button class="rtab" data-sec="love">💫 Love</button>
-    <button class="rtab" data-sec="money">💰 Money</button>
-    <button class="rtab" data-sec="career">🎯 Career</button>
-    <button class="rtab" data-sec="energy">⚡ Energy</button>
-    <button class="rtab" data-sec="forecast">🔮 Forecast</button>
-    <button class="rtab" data-sec="compat">❤️ Compat.</button>
-    <button class="rtab" data-sec="shadow">🌑 Shadow</button>
-  </nav>
-
-  <div class="rcontent" id="rcontent">
-    <!-- sections injected by JS -->
-  </div>
-</div>
-
 <script>
-// ══ STARS ══
-(function(){
-  var c=document.getElementById('sc'),x=c.getContext('2d'),W,H,s=[];
-  function init(){W=c.width=innerWidth;H=c.height=innerHeight;s=[];for(var i=0;i<180;i++)s.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.1+.2,o:Math.random()*.55+.1,sp:Math.random()*.003+.001,ph:Math.random()*Math.PI*2})}
-  function draw(t){x.clearRect(0,0,W,H);for(var i=0;i<s.length;i++){var p=s[i],op=p.o*(.5+.5*Math.sin(t*p.sp*60+p.ph));x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);x.fillStyle='rgba(255,255,255,'+op.toFixed(3)+')';x.fill()}requestAnimationFrame(draw)}
-  init();requestAnimationFrame(draw);window.addEventListener('resize',init);
-})();
+// ══ SIGN DATA ══
+var SIGNS = [
+  {name:'Aries',      dates:'Mar 21 – Apr 19', el:'Fire',  ec:'#e05a2b', path:'M30 40 C30 40 20 38 16 30 C12 22 18 14 24 18 C28 20 28 28 28 32 M30 40 C30 40 40 38 44 30 C48 22 42 14 36 18 C32 20 32 28 32 32 M30 40 L30 50'},
+  {name:'Taurus',     dates:'Apr 20 – May 20', el:'Earth', ec:'#4ade80', path:'M17 38 C12 32 14 22 16 16 M43 38 C48 32 46 22 44 16 M16 16 C16 16 23 14 30 14 C37 14 44 16 44 16 M17 38 A13 13 0 1 0 43 38'},
+  {name:'Gemini',     dates:'May 21 – Jun 20', el:'Air',   ec:'#7dd3fc', path:'M20 12 L20 48 M40 12 L40 48 M14 15 C14 15 22 19 30 19 C38 19 46 15 46 15 M14 45 C14 45 22 41 30 41 C38 41 46 45 46 45 M20 30 L40 30'},
+  {name:'Cancer',     dates:'Jun 21 – Jul 22', el:'Water', ec:'#818cf8', path:'M22 24 C22 24 13 22 11 30 C9 38 17 42 22 38 C27 34 24 25 22 24Z M38 36 C38 36 47 38 49 30 C51 22 43 18 38 22 C33 26 36 35 38 36Z'},
+  {name:'Leo',        dates:'Jul 23 – Aug 22', el:'Fire',  ec:'#e05a2b', path:'M26 28 A10 10 0 1 1 36 28 M36 28 C42 28 46 32 46 38 C46 44 40 48 36 48 C32 48 30 45 30 42 M30 42 C28 42 26 44 28 46'},
+  {name:'Virgo',      dates:'Aug 23 – Sep 22', el:'Earth', ec:'#4ade80', path:'M14 16 L14 38 M14 16 C14 16 18 9 23 16 C28 23 23 30 23 30 M23 30 C23 30 27 23 32 30 C37 37 32 40 32 40 M32 40 C32 40 36 34 40 38 C43 41 42 47 38 47 C34 47 32 44 32 40'},
+  {name:'Libra',      dates:'Sep 23 – Oct 22', el:'Air',   ec:'#7dd3fc', path:'M12 44 L48 44 M30 44 L30 30 M18 35 C18 35 20 28 26 28 C32 28 34 35 34 35 M18 22 C18 22 24 16 30 16 C36 16 42 22 42 22'},
+  {name:'Scorpio',    dates:'Oct 23 – Nov 21', el:'Water', ec:'#818cf8', path:'M12 16 L12 38 M12 16 C12 16 16 9 21 16 C26 23 21 30 21 30 M21 30 C21 30 25 23 30 30 C35 37 30 38 30 38 M30 38 C30 38 38 38 42 34 C46 30 46 22 46 22 M42 18 L46 22 L50 18'},
+  {name:'Sagittarius',dates:'Nov 22 – Dec 21', el:'Fire',  ec:'#e05a2b', path:'M14 46 L46 14 M32 14 L46 14 L46 28 M18 30 L30 42'},
+  {name:'Capricorn',  dates:'Dec 22 – Jan 19', el:'Earth', ec:'#4ade80', path:'M14 16 C14 16 14 32 22 36 C30 40 34 36 34 29 C34 22 28 18 22 22 C16 26 20 36 26 38 M26 38 C29 40 33 42 37 40 C42 38 46 32 46 25 M37 40 C37 42 35 48 30 50'},
+  {name:'Aquarius',   dates:'Jan 20 – Feb 18', el:'Air',   ec:'#7dd3fc', path:'M10 26 C14 22 18 30 22 26 C26 22 30 30 34 26 C38 22 42 30 46 26 M10 38 C14 34 18 42 22 38 C26 34 30 42 34 38 C38 34 42 42 46 38'},
+  {name:'Pisces',     dates:'Feb 19 – Mar 20', el:'Water', ec:'#818cf8', path:'M30 12 C20 12 12 20 12 30 C12 40 20 48 30 48 M30 12 C40 12 48 20 48 30 C48 40 40 48 30 48 M16 30 L44 30'}
+];
 
-// ══ SCREEN SWITCHER ══
-function show(id){
-  document.querySelectorAll('.screen').forEach(function(el){el.classList.remove('on')});
-  document.getElementById(id).classList.add('on');
-  window.scrollTo(0,0);
+// ══ CANVAS SETUP ══
+var cv = document.getElementById('cosmos');
+var ctx = cv.getContext('2d');
+var W, H;
+var stars = [], nodes = [], mouse = {x:-999, y:-999};
+var hovered = -1;
+var selectedSign = null;
+var animFrame;
+var SPIN_SPEED = 0.00018;
+var baseR = 0;   // global — set in initNodes, read in draw
+
+function resize(){
+  W = cv.width  = window.innerWidth;
+  H = cv.height = window.innerHeight;
+  initNodes();
 }
 
-// ══ SECTION SWITCHER ══
-function showSec(id){
-  document.querySelectorAll('.rsec').forEach(function(el){el.classList.remove('on')});
-  var sec=document.getElementById('sec-'+id);
-  if(sec) sec.classList.add('on');
-  document.querySelectorAll('.rtab').forEach(function(t){
-    t.classList.remove('on');
-    if(t.getAttribute('data-sec')===id) t.classList.add('on');
+function initNodes(){
+  nodes = [];
+  var cx = W/2, cy = H/2;
+  var total = SIGNS.length;
+  var heroH = Math.min(H * 0.28, 200); // space reserved for hero
+  var available = H - heroH;
+  baseR = Math.min(W * 0.36, available * 0.42);
+
+  for(var i=0; i<total; i++){
+    var angle = (i / total) * Math.PI * 2;
+    // stagger radii for organic feel
+    var r = baseR + (i%3 - 1) * (Math.min(W,H)*0.04);
+    nodes.push({
+      idx: i,
+      angle: angle,
+      r: r,
+      size: Math.min(W,H) * 0.033,
+      speed: SPIN_SPEED * (1 + (i%4)*0.15),
+      selfAngle: Math.random() * Math.PI * 2,
+      selfSpeed: 0.0008 + Math.random()*0.0006,
+      pulse: Math.random()*Math.PI*2,
+      x: cx + Math.cos(angle)*r,
+      y: cy + Math.sin(angle)*r
+    });
+  }
+
+  // stars
+  stars = [];
+  for(var j=0; j<260; j++){
+    stars.push({
+      x:Math.random()*W, y:Math.random()*H,
+      r:Math.random()*1.3+0.2,
+      o:Math.random()*0.6+0.1,
+      sp:Math.random()*0.002+0.0005,
+      ph:Math.random()*Math.PI*2
+    });
+  }
+}
+
+// ══ DRAW ══
+function draw(t){
+  animFrame = requestAnimationFrame(draw);
+  ctx.clearRect(0,0,W,H);
+
+  // background
+  var bg = ctx.createRadialGradient(W*.3,H*.35,0,W*.5,H*.5,W*.9);
+  bg.addColorStop(0,'#100525');
+  bg.addColorStop(.5,'#080318');
+  bg.addColorStop(1,'#060411');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // nebula blobs
+  [[W*.2,H*.3,280,260,.05],[W*.75,H*.6,220,200,.04],[W*.5,H*.8,180,300,.03]].forEach(function(n){
+    var g=ctx.createRadialGradient(n[0],n[1],0,n[0],n[1],n[2]);
+    g.addColorStop(0,'hsla('+n[3]+',55%,35%,'+n[4]+')');
+    g.addColorStop(1,'hsla('+n[3]+',55%,35%,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   });
-  window.scrollTo(0,0);
+
+  // stars
+  stars.forEach(function(s){
+    var op=s.o*(.5+.5*Math.sin(t*s.sp*60+s.ph));
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,'+op.toFixed(3)+')'; ctx.fill();
+  });
+
+  var heroOffset = Math.min(H*0.14, 110);
+  var cx=W/2, cy=H/2 + heroOffset;
+
+  // orbit ring hint
+  ctx.beginPath();
+  ctx.arc(cx, cy, baseR, 0, Math.PI*2);
+  ctx.strokeStyle='rgba(200,164,90,0.06)';
+  ctx.lineWidth=1; ctx.stroke();
+
+  // update positions
+  nodes.forEach(function(n){
+    n.angle    += n.speed;
+    n.selfAngle+= n.selfSpeed;
+    n.x = cx + Math.cos(n.angle)*n.r;
+    n.y = cy + Math.sin(n.angle)*n.r;
+  });
+
+  // find hovered
+  var newHov = -1;
+  nodes.forEach(function(n){
+    var dx=mouse.x-n.x, dy=mouse.y-n.y;
+    if(Math.sqrt(dx*dx+dy*dy) < n.size*1.2) newHov = n.idx;
+  });
+
+  // update tooltip
+  if(newHov !== hovered){
+    hovered = newHov;
+    updateTooltip();
+  }
+
+  // draw connection lines (faint)
+  ctx.save();
+  for(var i=0;i<nodes.length;i++){
+    var ni=nodes[i];
+    for(var j=i+1;j<nodes.length;j++){
+      var nj=nodes[j];
+      var dx=ni.x-nj.x, dy=ni.y-nj.y;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist < Math.min(W,H)*0.18){
+        var op=( 1 - dist/(Math.min(W,H)*0.18) ) * 0.07;
+        ctx.beginPath(); ctx.moveTo(ni.x,ni.y); ctx.lineTo(nj.x,nj.y);
+        ctx.strokeStyle='rgba(200,164,90,'+op.toFixed(3)+')';
+        ctx.lineWidth=0.5; ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+
+  // draw nodes
+  nodes.forEach(function(n){
+    var s = SIGNS[n.idx];
+    var isHov = (n.idx === hovered);
+    var pulse = .5+.5*Math.sin(t*.001*60+n.pulse);
+    var sz = n.size * (isHov ? 1.30 : 1);
+    var col = isHov ? s.ec : 'rgba(200,164,90,0.75)';
+
+    // ── LAYER 1: glow + circle + label (NO rotation) ──
+    ctx.save();
+    ctx.translate(n.x, n.y);
+
+    // outer glow
+    var gR = isHov ? sz*2.2 : sz*1.6;
+    var gc = ctx.createRadialGradient(0,0,0,0,0,gR);
+    gc.addColorStop(0, isHov ? s.ec+'50' : 'rgba(200,164,90,'+(0.12+pulse*0.06)+')');
+    gc.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle=gc; ctx.beginPath(); ctx.arc(0,0,gR,0,Math.PI*2); ctx.fill();
+
+    // circle background
+    ctx.beginPath(); ctx.arc(0,0,sz,0,Math.PI*2);
+    if(isHov){
+      var bg2=ctx.createRadialGradient(0,0,0,0,0,sz);
+      bg2.addColorStop(0,s.ec+'38'); bg2.addColorStop(1,s.ec+'0a');
+      ctx.fillStyle=bg2;
+    } else {
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+    }
+    ctx.fill();
+    ctx.strokeStyle = isHov ? s.ec : 'rgba(200,164,90,'+(0.25+pulse*0.1)+')';
+    ctx.lineWidth = isHov ? 1.5 : 0.8;
+    ctx.stroke();
+
+    // name label — drawn here, NO rotation applied
+    ctx.font = (isHov ? '500 ' : '300 ') + Math.max(8, sz*0.26)+'px Outfit, sans-serif';
+    ctx.fillStyle = isHov ? '#e8d4a0' : 'rgba(250,247,242,0.42)';
+    ctx.globalAlpha = isHov ? 1 : 0.7+pulse*0.15;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(s.name, 0, sz + 4);
+    ctx.globalAlpha=1;
+
+    ctx.restore();
+
+    // ── LAYER 2: icon only — rotates on its own axis ──
+    ctx.save();
+    ctx.translate(n.x, n.y);
+    ctx.rotate(n.selfAngle);           // only the icon spins
+    ctx.scale(sz/32, sz/32);
+    ctx.translate(-30, -30);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = isHov ? 1.9 : 1.6;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.globalAlpha = isHov ? 1 : 0.75+pulse*0.1;
+    ctx.stroke(new Path2D(s.path));
+    ctx.restore();
+  });
 }
 
-// ══ NAV ══
-document.getElementById('rnav').addEventListener('click',function(e){
-  var b=e.target.closest('.rtab');
-  if(b) showSec(b.getAttribute('data-sec'));
+// ══ TOOLTIP ══
+var tt = document.getElementById('tooltip');
+function updateTooltip(){
+  if(hovered < 0){
+    tt.classList.remove('show'); return;
+  }
+  var s = SIGNS[hovered];
+  document.getElementById('ttName').textContent  = s.name;
+  document.getElementById('ttDates').textContent = s.dates;
+  document.getElementById('ttEl').textContent    = s.el + ' sign';
+  tt.classList.add('show');
+}
+
+cv.addEventListener('mousemove', function(e){
+  mouse.x=e.clientX; mouse.y=e.clientY;
+  if(hovered>=0){
+    tt.style.left = (e.clientX+18)+'px';
+    tt.style.top  = (e.clientY-40)+'px';
+  }
 });
 
-// ══ API KEY ══
-// ── PROXY URL: paste your Cloudflare Worker URL here after deploying ──
-var PROXY_URL = 'https://workerjs.lucaixsouzadias10.workers.dev';
-show('sForm');
+cv.addEventListener('mouseleave', function(){
+  mouse.x=-999; mouse.y=-999;
+});
 
-// API key handled server-side via Cloudflare Worker
-// resetKey element removed
+// ══ CLICK ══
+cv.addEventListener('click', function(e){
+  if(hovered < 0) return;
+  // ripple
+  var rip=document.createElement('div');
+  rip.className='ripple';
+  var sz=60;
+  rip.style.cssText='left:'+(e.clientX-sz/2)+'px;top:'+(e.clientY-sz/2)+'px;width:'+sz+'px;height:'+sz+'px;';
+  document.body.appendChild(rip);
+  setTimeout(function(){ rip.remove(); }, 700);
+  openForm(hovered);
+});
 
-// ══ PROFILE MAP ══
-var PROF={
-  solar:   {icon:'🔥',name:'The Solar Sovereign'},
-  tide:    {icon:'🌊',name:'The Deep Tide'},
-  wanderer:{icon:'🌪',name:'The Cosmic Wanderer'},
-  architect:{icon:'🌿',name:'The Sacred Architect'},
-  oracle:  {icon:'🌙',name:'The Midnight Oracle'}
-};
-
-// ══ LOADING STEPS ANIMATION ══
-function runLoadingSteps(name, onDone){
-  document.getElementById('lNameTxt').textContent=name+"'s";
-  document.getElementById('lBar').style.width='0%';
-  var stepIds=['ls1','ls2','ls3','ls4','ls5'];
-  var msgs=['Calculating your exact birth chart…','Identifying Sun, Moon & Rising signs…','Reading all 10 planetary positions…','Channeling your cosmic reading…','Composing your 47-page blueprint…'];
-  var pcts=[18,36,54,72,90];
-  // reset
-  stepIds.forEach(function(id){
-    var el=document.getElementById(id);
-    el.classList.remove('on','done');
-    el.querySelector('.ldot').textContent='◌';
+// touch support
+cv.addEventListener('touchstart', function(e){
+  var t=e.touches[0];
+  mouse.x=t.clientX; mouse.y=t.clientY;
+  // update hovered manually
+  nodes.forEach(function(n){
+    var dx=mouse.x-n.x, dy=mouse.y-n.y;
+    if(Math.sqrt(dx*dx+dy*dy) < n.size*1.4) hovered=n.idx;
   });
-  document.getElementById(stepIds[0]).classList.add('on');
-  document.getElementById('lStatus').textContent=msgs[0];
+}, {passive:true});
+
+cv.addEventListener('touchend', function(e){
+  if(hovered>=0) openForm(hovered);
+  mouse.x=-999; mouse.y=-999;
+}, {passive:true});
+
+// ══ OPEN FORM ══
+function openForm(idx){
+  selectedSign = SIGNS[idx];
+  document.getElementById('sbName').textContent  = selectedSign.name;
+  document.getElementById('sbDates').textContent = selectedSign.dates;
+  // build mini SVG
+  document.getElementById('sbSvg').innerHTML =
+    '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="'+selectedSign.path+'" stroke="#c8a45a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+    '</svg>';
+  showScreen('sForm');
+}
+
+// ══ SCREENS ══
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(el){ el.classList.remove('on'); });
+  if(id) document.getElementById(id).classList.add('on');
+}
+
+document.getElementById('btnBack').addEventListener('click', function(){ showScreen(null); });
+
+// ══ DATE FORMAT ══
+function fmtDate(el){
+  var v=el.value.replace(/[^0-9]/g,'');
+  if(v.length>=5) v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
+  else if(v.length>=3) v=v.slice(0,2)+'/'+v.slice(2);
+  el.value=v;
+}
+function parseDob(s){
+  if(!s) return '';
+  var re=/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+  if(re.test(s)) return s;
+  var p=s.split('/');
+  if(p.length===3&&p[2].length===4) return p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');
+  return s;
+}
+function readTime(){
+  var h=document.getElementById('iTH').value;
+  var m=document.getElementById('iTM').value||'00';
+  var ap=document.getElementById('iTP').value;
+  if(!h) return '12:00';
+  var hr=parseInt(h);
+  if(ap==='PM'&&hr!==12) hr+=12;
+  if(ap==='AM'&&hr===12) hr=0;
+  return hr.toString().padStart(2,'0')+':'+m;
+}
+
+// ══ SUBMIT ══
+document.getElementById('btnGo').addEventListener('click', function(){
+  var name=(document.getElementById('iName').value.trim())||'Seeker';
+  var dob=parseDob(document.getElementById('iDob').value);
+  var city=(document.getElementById('iCity').value.trim())||'Unknown';
+  var time=readTime();
+  if(!dob||dob.length<8){ alert('Please enter your date of birth (MM/DD/YYYY).'); return; }
+  window._userData={name:name,dob:dob,time:time,city:city,
+    sign:selectedSign?selectedSign.name:'Unknown',
+    signGlyph:selectedSign?selectedSign.name[0]:'⭐'};
+  showScreen('sLoad');
+  document.getElementById('lErr').style.display='none';
+  runLoading(name);
+});
+
+// ══ LOADING ══
+function runLoading(name){
+  document.getElementById('lTxt').textContent=name+"'s";
+  document.getElementById('lBar').style.width='0%';
+  var ids=['ls1','ls2','ls3','ls4','ls5'];
+  var msgs=['Calculating your exact birth chart…','Identifying Sun, Moon & Rising signs…','Reading all 10 planetary positions…','Channeling your cosmic reading…','Composing your blueprint…'];
+  var pcts=[18,36,54,72,90];
+  ids.forEach(function(id){ var el=document.getElementById(id); el.classList.remove('on','done'); el.querySelector('.ldot').textContent='◌'; });
+  document.getElementById(ids[0]).classList.add('on');
+  document.getElementById('lSt').textContent=msgs[0];
   document.getElementById('lBar').style.width=pcts[0]+'%';
   var i=1;
   var iv=setInterval(function(){
-    var prev=document.getElementById(stepIds[i-1]);
-    prev.classList.remove('on'); prev.classList.add('done');
-    prev.querySelector('.ldot').textContent='✓';
-    if(i<stepIds.length){
-      document.getElementById(stepIds[i]).classList.add('on');
-      document.getElementById('lStatus').textContent=msgs[i];
+    var prev=document.getElementById(ids[i-1]);
+    prev.classList.remove('on'); prev.classList.add('done'); prev.querySelector('.ldot').textContent='✓';
+    if(i<ids.length){
+      document.getElementById(ids[i]).classList.add('on');
+      document.getElementById('lSt').textContent=msgs[i];
       document.getElementById('lBar').style.width=pcts[i]+'%';
       i++;
     } else {
       clearInterval(iv);
       document.getElementById('lBar').style.width='100%';
-      document.getElementById('lStatus').textContent='Your blueprint is ready, '+name+'.';
-      setTimeout(onDone, 500);
+      document.getElementById('lSt').textContent='Your blueprint is ready, '+name+'.';
+      setTimeout(function(){
+        sessionStorage.setItem('astral_user',JSON.stringify(window._userData));
+        window.location.href='cosmicpath-report.html';
+      },600);
     }
-  }, 950);
+  },950);
 }
 
-// ══ CALL CLAUDE API ══
-function callClaude(prompt, onSuccess, onError){
-  fetch(PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: prompt })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    if(data.error){ onError(data.error); return; }
-    if(data.result){ onSuccess(data.result); return; }
-    onError('Empty response from server');
-  })
-  .catch(function(e){ onError(e.message||'Network error'); });
-}
-
-// ══ MAIN PROMPT ══
-function buildPrompt(userData){
-  var timeStr = userData.timePrec==='exact' && userData.time
-    ? userData.time
-    : ({morning:'09:00', afternoon:'15:00', evening:'20:00', unknown:'12:00'}[userData.timePrec]||'12:00');
-
-  return [
-    'You are a master astrologer with 30+ years of experience. Your task is to:',
-    '',
-    '1. Calculate the EXACT natal birth chart for this person using proper astronomical ephemeris calculations',
-    '2. Write a deeply personal, 47-page astral blueprint based EXCLUSIVELY on their actual planetary positions',
-    '',
-    'BIRTH DATA:',
-    '- Name: '+userData.name,
-    '- Date of birth: '+userData.dob,
-    '- Time of birth: '+timeStr+' ('+userData.timePrec+')',
-    '- City of birth: '+userData.city,
-    '- Cosmic profile from quiz: '+userData.profileName,
-    '',
-    'STEP 1 — CALCULATE THE CHART:',
-    'Based on the birth data above, calculate and state these planetary positions (use real ephemeris data for the given date and city coordinates):',
-    '- Sun sign and degree',
-    '- Moon sign and degree',
-    '- Ascendant/Rising sign (use '+timeStr+' local time in '+userData.city+')',
-    '- Mercury sign',
-    '- Venus sign',
-    '- Mars sign',
-    '- Jupiter sign',
-    '- Saturn sign',
-    '- Uranus sign',
-    '- Neptune sign',
-    '- North Node sign',
-    '',
-    'STEP 2 — WRITE THE REPORT:',
-    'Using ONLY the calculated positions above (not generic sun sign descriptions), write 8 sections. Each section must reference specific planetary placements by name and degree. Never write generic horoscope content — every paragraph must be anchored to actual chart positions.',
-    '',
-    'Write in English. Second person ("you"). Warm, poetic, modern tone. Each section min 3 paragraphs.',
-    '',
-    'FORMAT YOUR RESPONSE AS JSON (no markdown, no backticks, raw JSON only):',
-    '{',
-    '  "chart": {',
-    '    "sun": "Sign at Xº",',
-    '    "moon": "Sign at Xº",',
-    '    "rising": "Sign at Xº",',
-    '    "mercury": "Sign at Xº",',
-    '    "venus": "Sign at Xº",',
-    '    "mars": "Sign at Xº",',
-    '    "jupiter": "Sign at Xº",',
-    '    "saturn": "Sign at Xº",',
-    '    "uranus": "Sign at Xº",',
-    '    "neptune": "Sign at Xº",',
-    '    "north_node": "Sign at Xº"',
-    '  },',
-    '  "sections": {',
-    '    "personality": { "text": "3+ paragraphs", "insight": "one powerful sentence" },',
-    '    "love": { "text": "3+ paragraphs", "highlight": "key love truth about their Venus", "insight": "one powerful sentence" },',
-    '    "money": { "text": "3+ paragraphs", "highlight": "their specific money block from the chart" },',
-    '    "career": { "text": "3+ paragraphs", "insight": "their soul calling based on Midheaven" },',
-    '    "energy": { "text": "2 paragraphs about current planetary transits", "highlight": "specific action window this week", "meters": [{"label":"Creative energy","pct":0},{"label":"Emotional clarity","pct":0},{"label":"Forward momentum","pct":0},{"label":"Relationship energy","pct":0},{"label":"Financial flow","pct":0}] },',
-    '    "forecast": { "intro": "1 paragraph", "timeline": [{"period":"Next 2 weeks","text":"..."},{"period":"Days 15-30","text":"..."},{"period":"Month 2","text":"..."},{"period":"Month 3","text":"..."}] },',
-    '    "compatibility": { "intro": "1 paragraph", "scores": [{"icon":"🌊","name":"The Deep Tide","pct":0,"desc":"..."},{"icon":"🌿","name":"The Sacred Architect","pct":0,"desc":"..."},{"icon":"🌙","name":"The Midnight Oracle","pct":0,"desc":"..."},{"icon":"🌪","name":"The Cosmic Wanderer","pct":0,"desc":"..."},{"icon":"🔥","name":"The Solar Sovereign","pct":0,"desc":"..."}] },',
-    '    "shadow": { "text": "2 paragraphs", "shadow_name": "Name of their specific shadow pattern", "shadow_desc": "3-4 sentences describing this shadow and path forward", "closing": "1 empowering paragraph" }',
-    '  }',
-    '}'
-  ].join('\n');
-}
-
-// ══ RENDER REPORT ══
-function renderReport(userData, parsed){
-  var chart = parsed.chart || {};
-  var secs  = parsed.sections || {};
-  var p     = PROF[userData.profile] || PROF.solar;
-
-  // header
-  document.getElementById('rName').textContent   = userData.name;
-  document.getElementById('rSun').textContent    = chart.sun    || '—';
-  document.getElementById('rMoon').textContent   = chart.moon   || '—';
-  document.getElementById('rRising').textContent = chart.rising || '—';
-  document.getElementById('rVenus').textContent  = chart.venus  || '—';
-  document.getElementById('rMars').textContent   = chart.mars   || '—';
-  document.getElementById('rPIcon').textContent  = p.icon;
-  document.getElementById('rPName').textContent  = p.name;
-
-  // planet pills
-  var planets=[
-    {ico:'☿',lbl:'Mercury',val:chart.mercury},
-    {ico:'♃',lbl:'Jupiter',val:chart.jupiter},
-    {ico:'♄',lbl:'Saturn', val:chart.saturn},
-    {ico:'♅',lbl:'Uranus', val:chart.uranus},
-    {ico:'♆',lbl:'Neptune',val:chart.neptune},
-    {ico:'☊',lbl:'N.Node', val:chart.north_node}
-  ];
-  var pb=document.getElementById('planetsBar'); pb.innerHTML='';
-  planets.forEach(function(pl){
-    if(pl.val) pb.innerHTML+='<div class="planet"><span>'+pl.ico+'</span>'+pl.lbl+': '+pl.val+'</div>';
-  });
-
-  // build sections HTML
-  var sections=[
-    {id:'personality', ico:'🪐', lbl:'Section 01', tit:'Your Cosmic <em>Personality</em>',
-      html: function(s){
-        return prose(s.text)+
-        '<div class="icard"><div class="iclbl">The stars want you to know</div><div class="ictxt">'+esc(s.insight||'')+'</div></div>';
-      },
-      prev:null, next:'love', pLbl:'', nLbl:'Love →'
-    },
-    {id:'love', ico:'💫', lbl:'Section 02', tit:'Love & <em>Relationships</em>',
-      html: function(s){
-        var parts=splitProse(s.text,2);
-        return prose(parts[0])+
-        '<div class="hbox">'+esc(s.highlight||'')+'</div>'+
-        prose(parts[1]||'')+
-        '<div class="icard"><div class="iclbl">Your love pattern</div><div class="ictxt">'+esc(s.insight||'')+'</div></div>';
-      },
-      prev:'personality', next:'money', pLbl:'← Personality', nLbl:'Money →'
-    },
-    {id:'money', ico:'💰', lbl:'Section 03', tit:'Money & <em>Abundance</em>',
-      html: function(s){
-        var parts=splitProse(s.text,2);
-        return prose(parts[0])+
-        '<div class="hbox">'+esc(s.highlight||'')+'</div>'+
-        prose(parts[1]||'');
-      },
-      prev:'love', next:'career', pLbl:'← Love', nLbl:'Career →'
-    },
-    {id:'career', ico:'🎯', lbl:'Section 04', tit:'Career & <em>Soul Purpose</em>',
-      html: function(s){
-        var parts=splitProse(s.text,2);
-        return prose(parts[0])+
-        '<div class="icard"><div class="iclbl">Your soul\'s calling</div><div class="ictxt">'+esc(s.insight||'')+'</div></div>'+
-        prose(parts[1]||'');
-      },
-      prev:'money', next:'energy', pLbl:'← Money', nLbl:'Energy →'
-    },
-    {id:'energy', ico:'⚡', lbl:'Section 05', tit:'Your Energy <em>Right Now</em>',
-      html: function(s){
-        var meters='';
-        if(s.meters) s.meters.forEach(function(m){
-          meters+='<div style="display:flex;align-items:center;gap:11px;margin-bottom:12px">'+
-            '<div style="font-size:12px;color:rgba(250,247,242,.45);width:130px;flex-shrink:0">'+esc(m.label)+'</div>'+
-            '<div style="flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden">'+
-            '<div style="height:100%;width:'+m.pct+'%;background:linear-gradient(90deg,#6b4fa0,#c8a45a);border-radius:3px"></div></div>'+
-            '<div style="font-size:11px;color:rgba(250,247,242,.35);width:30px;text-align:right">'+m.pct+'%</div></div>';
-        });
-        return prose(s.text)+
-        '<div style="margin:20px 0">'+meters+'</div>'+
-        '<div class="hbox">'+esc(s.highlight||'')+'</div>';
-      },
-      prev:'career', next:'forecast', pLbl:'← Career', nLbl:'Forecast →'
-    },
-    {id:'forecast', ico:'🔮', lbl:'Section 06', tit:'Next 30 & <em>90 Days</em>',
-      html: function(s){
-        var tl='<div style="display:flex;flex-direction:column;margin:20px 0">';
-        if(s.timeline) s.timeline.forEach(function(t){
-          tl+='<div style="display:flex;gap:15px;padding-bottom:22px">'+
-            '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'+
-            '<div style="width:9px;height:9px;border-radius:50%;background:#c8a45a;margin-top:4px;box-shadow:0 0 7px rgba(200,164,90,.5)"></div>'+
-            '<div style="width:1px;flex:1;background:rgba(200,164,90,.18);margin-top:4px"></div></div>'+
-            '<div><div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#c8a45a;margin-bottom:4px">'+esc(t.period)+'</div>'+
-            '<div style="font-size:14px;color:rgba(250,247,242,.55);line-height:1.65">'+esc(t.text)+'</div></div></div>';
-        });
-        tl+='</div>';
-        return prose(s.intro||'')+tl;
-      },
-      prev:'energy', next:'compat', pLbl:'← Energy', nLbl:'Compat. →'
-    },
-    {id:'compat', ico:'❤️', lbl:'Section 07', tit:'Compatibility <em>Map</em>',
-      html: function(s){
-        var cg='<div style="display:flex;flex-direction:column;gap:11px;margin-top:20px">';
-        if(s.scores) s.scores.forEach(function(sc){
-          cg+='<div style="display:flex;align-items:center;gap:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:13px;padding:13px 16px">'+
-            '<div style="font-size:22px;flex-shrink:0">'+sc.icon+'</div>'+
-            '<div style="flex:1"><div style="font-size:14px;font-weight:500;color:#faf7f2;margin-bottom:2px">'+esc(sc.name)+'</div>'+
-            '<div style="font-size:12px;color:rgba(250,247,242,.38);line-height:1.5">'+esc(sc.desc)+'</div></div>'+
-            '<div style="flex-shrink:0;text-align:right">'+
-            '<div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;font-weight:300;color:#e8d4a0">'+sc.pct+'%</div>'+
-            '<div style="font-size:10px;color:rgba(250,247,242,.3)">match</div></div></div>';
-        });
-        cg+='</div>';
-        return prose(s.intro||'')+cg;
-      },
-      prev:'forecast', next:'shadow', pLbl:'← Forecast', nLbl:'Shadow →'
-    },
-    {id:'shadow', ico:'🌑', lbl:'Section 08', tit:'Your <em>Shadow Side</em>',
-      html: function(s){
-        return prose(s.text||'')+
-        '<div style="background:rgba(10,8,18,.55);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;margin:20px 0">'+
-        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-style:italic;color:rgba(250,247,242,.55);margin-bottom:9px">'+esc(s.shadow_name||'')+'</div>'+
-        '<div style="font-size:14px;color:rgba(250,247,242,.42);line-height:1.75">'+esc(s.shadow_desc||'')+'</div></div>'+
-        prose(s.closing||'')+
-        '<div class="nudge"><div class="nudgedsc"><div class="nudgetit">Want a full Compatibility Reading?</div>Enter you and your partner\'s birth data and see your cosmic match score, planet-by-planet analysis and conflicts.</div>'+
-        '<button class="nudgebtn" id="goCompatBtn">Check Compatibility →</button></div>';
-      },
-      prev:'compat', next:null, pLbl:'← Compat.', nLbl:'↺ Restart'
-    }
-  ];
-
-  // inject HTML
-  var container=document.getElementById('rcontent');
-  container.innerHTML='';
-  sections.forEach(function(sec,idx){
-    var secData=secs[sec.id]||{};
-    var div=document.createElement('div');
-    div.className='rsec'+(idx===0?' on':'');
-    div.id='sec-'+sec.id;
-    var prevBtn=sec.prev
-      ? '<button class="sarrow" data-to="'+sec.prev+'">'+sec.pLbl+'</button>'
-      : '<button class="sarrow" disabled>← Prev</button>';
-    var nextBtn=sec.next
-      ? '<button class="sarrow" data-to="'+sec.next+'">'+sec.nLbl+'</button>'
-      : '<button class="sarrow" data-to="personality">↺ Restart</button>';
-    div.innerHTML=
-      '<div class="sechdr"><div class="secico">'+sec.ico+'</div>'+
-      '<div><div class="seclbl">'+sec.lbl+'</div><div class="sectit">'+sec.tit+'</div></div></div>'+
-      sec.html(secData)+
-      '<div class="secnav">'+prevBtn+nextBtn+'</div>';
-    container.appendChild(div);
-  });
-
-  // section arrow navigation (delegated)
-  container.addEventListener('click',function(e){
-    var b=e.target.closest('.sarrow[data-to]');
-    if(b) showSec(b.getAttribute('data-to'));
-  });
-
-  showSec('personality');
-  show('sReport');
-}
-
-// ══ HELPERS ══
-function prose(text){
-  if(!text) return '';
-  // split by \n\n or plain newlines into paragraphs
-  var paras = text.split(/\n\n+/);
-  if(paras.length===1) paras=text.split(/\n/);
-  return '<div class="prose">'+paras.filter(function(p){return p.trim()}).map(function(p){return '<p>'+p.trim()+'</p>'}).join('')+'</div>';
-}
-function splitProse(text, at){
-  if(!text) return ['',''];
-  var paras=text.split(/\n\n+/);
-  if(paras.length===1) paras=text.split(/\n/);
-  paras=paras.filter(function(p){return p.trim()});
-  var half=Math.max(1,Math.floor(paras.length/2));
-  var a=paras.slice(0,half).map(function(p){return '<p>'+p.trim()+'</p>'}).join('');
-  var b=paras.slice(half).map(function(p){return '<p>'+p.trim()+'</p>'}).join('');
-  return ['<div class="prose">'+a+'</div>','<div class="prose">'+b+'</div>'];
-}
-function esc(s){
-  return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ══ MAIN FLOW ══
-document.getElementById('btnGo').addEventListener('click',function(){
-  var name    = (document.getElementById('iName').value.trim())||'Seeker';
-  var dob     = parseDob(document.getElementById('iDob').value);
-  var time    = readTime('iTime');
-  var prec    = document.getElementById('iPrec').value;
-  var city    = (document.getElementById('iCity').value.trim())||'Unknown city';
-  var profile = document.getElementById('iProfile').value||'solar';
-  var p       = PROF[profile]||PROF.solar;
-
-  if(!dob||dob.length<8){ alert('Please enter your date of birth in MM/DD/YYYY format.'); return; }
-
-  var userData={name:name,dob:dob,time:time,timePrec:prec,city:city,profile:profile,profileName:p.name};
-  window._userData=userData;
-  window._profile=profile;
-
-  show('sLoad');
-  document.getElementById('lErr').style.display='none';
-
-  // Start visual steps + API call in parallel
-  var apiDone=false, stepsDone=false, apiResult=null, apiError=null;
-
-  function tryRender(){
-    if(!apiDone||!stepsDone) return;
-    if(apiError){
-      document.getElementById('lErr').textContent='Error: '+apiError+'\n\nMake sure your API key is correct and has credits.';
-      document.getElementById('lErr').style.display='block';
-      document.getElementById('lStatus').textContent='Something went wrong.';
-      return;
-    }
-    // parse JSON from Claude
-    try{
-      var raw=apiResult;
-      // strip any markdown fences if present
-      raw=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-      var parsed=JSON.parse(raw);
-      renderReport(userData, parsed);
-    } catch(e){
-      // If JSON parse fails, try to extract what we can
-      document.getElementById('lErr').textContent='Could not parse the reading. Please try again.';
-      document.getElementById('lErr').style.display='block';
-    }
-  }
-
-  // 1) visual loading animation (~5.5s)
-  runLoadingSteps(name, function(){
-    stepsDone=true;
-    tryRender();
-  });
-
-  // 2) API call
-  var prompt=buildPrompt(userData);
-  callClaude(prompt,
-    function(text){ apiResult=text; apiDone=true; tryRender(); },
-    function(err){  apiError=err;  apiDone=true; tryRender(); }
-  );
-});
-
-// ══ SHARE ══
-document.getElementById('btnTT').addEventListener('click',function(){
-  var p=PROF[window._profile||'solar'];
-  var txt='✨ I just got my Astral Blueprint and I am '+p.icon+' '+p.name+'. The stars read me completely. astralblueprint.com #AstralBlueprint #Astrology';
-  if(navigator.share){ navigator.share({title:'My Astral Blueprint',text:txt}); }
-  else{ navigator.clipboard.writeText(txt).then(function(){ alert('Copied! Paste it on TikTok 🔥'); }); }
-});
-document.getElementById('btnCP').addEventListener('click',function(){
-  navigator.clipboard.writeText(window.location.href).then(function(){ alert('Link copied! 🌙'); });
-});
-
-// ══ DATE INPUT FORMATTER (MM/DD/YYYY) ══
-function fmtDateInput(el){
-  var v = el.value.replace(/[^0-9]/g,'');
-  if(v.length>=5) v = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
-  else if(v.length>=3) v = v.slice(0,2)+'/'+v.slice(2);
-  el.value = v;
-}
-
-// ══ PARSE MM/DD/YYYY → YYYY-MM-DD for prompt ══
-function parseDob(str){
-  if(!str) return '';
-  // already YYYY-MM-DD
-  var reDate=/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/; if(reDate.test(str)) return str;
-  var p = str.split('/');
-  if(p.length===3 && p[2].length===4) return p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');
-  return str;
-}
-
-// ══ READ TIME FROM SELECTS ══
-function readTime(prefix){
-  var h = document.getElementById(prefix+'H');
-  var m = document.getElementById(prefix+'M');
-  var ap = document.getElementById(prefix+'P');
-  if(!h || !h.value || !m || !m.value) return '12:00';
-  var hr = parseInt(h.value);
-  var mn = m.value;
-  var ampm = ap ? ap.value : 'AM';
-  if(ampm==='PM' && hr!==12) hr+=12;
-  if(ampm==='AM' && hr===12) hr=0;
-  return hr.toString().padStart(2,'0')+':'+mn;
-}
+// ══ INIT ══
+window.addEventListener('resize', resize);
+resize();
+draw(0);
 </script>
-
-<!-- ══ SCREEN 4: COMPAT FORM ══ -->
-<div id="sCompatForm" class="screen">
-  <div class="compat-header">
-    <div class="feyebrow">Cosmic Compatibility</div>
-    <h2>Are you written<br>in the same <em>stars?</em></h2>
-    <p>Enter both birth charts. The cosmos will calculate your planetary synastry, match score and the real conflicts between you.</p>
-  </div>
-  <div class="compat-grid">
-    <div class="person-box">
-      <div class="person-title pt1">✦ Person 1</div>
-      <div class="field"><label>Name</label><input type="text" id="c1Name" placeholder="e.g. Sofia"></div>
-      <div class="field"><label>Date of Birth</label><input type="text" id="c1Dob" placeholder="MM/DD/YYYY" maxlength="10" oninput="fmtDateInput(this)"></div>
-      <div class="field"><label>Birth Time</label><div style="display:flex;gap:6px;align-items:center"><select id="c1TimeH" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="">HH</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><span style="color:rgba(250,247,242,0.3);font-size:16px">:</span><select id="c1TimeM" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="">MM</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select><select id="c1TimeP" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="AM">AM</option><option value="PM">PM</option></select></div></div>
-      <div class="field"><label>City & Country of Birth</label><input type="text" id="c1City" placeholder="e.g. New York, NY"></div>
-    </div>
-    <div class="compat-vs">×</div>
-    <div class="person-box" style="border-color:rgba(155,127,232,0.3)">
-      <div class="person-title pt2">✦ Person 2</div>
-      <div class="field"><label>Name</label><input type="text" id="c2Name" placeholder="e.g. Lucas"></div>
-      <div class="field"><label>Date of Birth</label><input type="text" id="c2Dob" placeholder="MM/DD/YYYY" maxlength="10" oninput="fmtDateInput(this)"></div>
-      <div class="field"><label>Birth Time</label><div style="display:flex;gap:6px;align-items:center"><select id="c2TimeH" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="">HH</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select><span style="color:rgba(250,247,242,0.3);font-size:16px">:</span><select id="c2TimeM" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="">MM</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select><select id="c2TimeP" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:12px 10px;font-family:Outfit,sans-serif;font-size:14px;color:#faf7f2;outline:none;-webkit-appearance:none;appearance:none"><option value="AM">AM</option><option value="PM">PM</option></select></div></div>
-      <div class="field"><label>City & Country of Birth</label><input type="text" id="c2City" placeholder="e.g. Los Angeles, CA"></div>
-    </div>
-  </div>
-  <button class="btncompat" id="btnRunCompat">
-    Calculate Our Compatibility
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5l4 4-4 4M3.5 7.5h8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-  <p class="fnote" style="margin-top:14px">🔒 Data is private · <a href="#" id="backFromCompat" style="color:#c8a45a">← Back to my reading</a></p>
-</div>
-
-<!-- ══ SCREEN 5: COMPAT RESULT ══ -->
-<div id="sCompatResult" class="screen">
-  <div class="compat-result-hdr">
-    <div class="reyebrow">Synastry Reading</div>
-    <div class="compat-names"><em id="crName1">Sofia</em> &amp; <em id="crName2">Lucas</em></div>
-    <div class="score-circle-wrap">
-      <div class="score-circle">
-        <div class="score-num" id="crScore">—</div>
-        <div class="score-lbl">match</div>
-      </div>
-    </div>
-    <div class="score-verdict" id="crVerdict">—</div>
-  </div>
-
-  <nav class="compat-tabs" id="compatTabs">
-    <button class="ctab on" data-csec="overview">🌟 Overview</button>
-    <button class="ctab" data-csec="planets">🪐 Planets</button>
-    <button class="ctab" data-csec="conflicts">⚡ Conflicts</button>
-    <button class="ctab" data-csec="strengths">💚 Strengths</button>
-    <button class="ctab" data-csec="advice">🔮 Advice</button>
-  </nav>
-
-  <div class="compat-content">
-    <div class="csec on" id="csec-overview"><div id="cr-overview" class="prose"></div></div>
-    <div class="csec" id="csec-planets"><div id="cr-planets"></div></div>
-    <div class="csec" id="csec-conflicts"><div id="cr-conflicts"></div></div>
-    <div class="csec" id="csec-strengths"><div id="cr-strengths"></div></div>
-    <div class="csec" id="csec-advice"><div id="cr-advice" class="prose"></div></div>
-    <button class="back-btn" id="backToCompatForm">← Try another couple</button>
-  </div>
-</div>
-
-<script>
-// ══ COMPATIBILITY NAVIGATION ══
-document.addEventListener('click', function(e){
-  if(e.target && e.target.id==='goCompatBtn'){ show('sCompatForm'); }
-  if(e.target && e.target.id==='backFromCompat'){ e.preventDefault(); show('sReport'); }
-  if(e.target && e.target.id==='backToCompatForm'){ show('sCompatForm'); }
-});
-
-document.addEventListener('click', function(e){ if(!e.target.closest('.ctab')) return; var tabs=e.target.closest('#compatTabs'); if(!tabs) return;
-  var b=e.target.closest('.ctab');
-  var id=b.getAttribute('data-csec');
-  document.querySelectorAll('.ctab').forEach(function(t){t.classList.remove('on')});
-  document.querySelectorAll('.csec').forEach(function(s){s.classList.remove('on')});
-  b.classList.add('on');
-  var sec=document.getElementById('csec-'+id);
-  if(sec) sec.classList.add('on');
-  window.scrollTo(0,0);
-});
-
-function buildCompatPrompt(p1,p2){
-  return 'You are a master synastry astrologer with 30 years experience.\n\nCalculate the natal birth charts for these two people using real ephemeris data, then provide a full compatibility synastry analysis.\n\nPERSON 1:\n- Name: '+p1.name+'\n- Date of birth: '+p1.dob+'\n- Time: '+(p1.time||'12:00')+'\n- City: '+p1.city+'\n\nPERSON 2:\n- Name: '+p2.name+'\n- Date of birth: '+p2.dob+'\n- Time: '+(p2.time||'12:00')+'\n- City: '+p2.city+'\n\nRespond ONLY with valid raw JSON, no markdown, no backticks:\n{\n  "person1_chart":{"sun":"","moon":"","rising":"","venus":"","mars":""},\n  "person2_chart":{"sun":"","moon":"","rising":"","venus":"","mars":""},\n  "score":0,\n  "verdict":"one evocative sentence about this connection",\n  "overview":"3 paragraphs about what this connection feels like, its deepest potential, and what both need to understand",\n  "planets":[\n    {"planet":"Sun","icon":"☀️","p1_sign":"","p2_sign":"","aspect":"","score":0,"description":"how their solar identities interact"},\n    {"planet":"Moon","icon":"🌙","p1_sign":"","p2_sign":"","aspect":"","score":0,"description":"emotional compatibility"},\n    {"planet":"Venus","icon":"♀️","p1_sign":"","p2_sign":"","aspect":"","score":0,"description":"love styles and attraction"},\n    {"planet":"Mars","icon":"♂️","p1_sign":"","p2_sign":"","aspect":"","score":0,"description":"desire and conflict style"},\n    {"planet":"Mercury","icon":"☿","p1_sign":"","p2_sign":"","aspect":"","score":0,"description":"how they communicate"}\n  ],\n  "conflicts":[\n    {"title":"","description":"3-4 sentences on this tension"},\n    {"title":"","description":""},\n    {"title":"","description":""}\n  ],\n  "strengths":[\n    {"title":"","description":"3-4 sentences on this strength"},\n    {"title":"","description":""},\n    {"title":"","description":""}\n  ],\n  "advice":"4 paragraphs of honest cosmic advice for this couple"\n}';
-}
-
-function renderCompatResult(p1,p2,data){
-  document.getElementById('crName1').textContent=p1.name;
-  document.getElementById('crName2').textContent=p2.name;
-  document.getElementById('crScore').textContent=(data.score||0)+'%';
-  document.getElementById('crVerdict').textContent=data.verdict||'';
-  document.getElementById('cr-overview').innerHTML=prose(data.overview||'');
-
-  var pl=document.getElementById('cr-planets'); pl.innerHTML='';
-  (data.planets||[]).forEach(function(p){
-    var sc=parseInt(p.score)||50;
-    var cls=sc>=70?'harmony':sc<=40?'tension':'neutral';
-    pl.innerHTML+='<div class="planet-row"><div class="planet-ico">'+p.icon+'</div><div class="planet-body"><div class="planet-name">'+esc(p.planet)+'</div><div class="planet-signs"><strong>'+esc(p1.name)+':</strong> '+esc(p.p1_sign)+' &nbsp;·&nbsp; <strong>'+esc(p2.name)+':</strong> '+esc(p.p2_sign)+'</div><div style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:rgba(250,247,242,.3);margin-bottom:5px">'+esc(p.aspect||'')+'</div><div class="planet-desc">'+esc(p.description||'')+'</div></div><div class="planet-score"><div class="pscore-num '+cls+'">'+sc+'%</div><div class="pscore-lbl">harmony</div></div></div>';
-  });
-
-  var cf=document.getElementById('cr-conflicts');
-  cf.innerHTML='<div class="prose"><p style="margin-bottom:20px">These are the real tensions in this connection — not reasons to walk away, but patterns to understand before they become walls.</p></div>';
-  (data.conflicts||[]).forEach(function(c){
-    cf.innerHTML+='<div class="conflict-box"><div class="conflict-title">⚡ '+esc(c.title||'')+'</div><div class="conflict-text">'+esc(c.description||'')+'</div></div>';
-  });
-
-  var st=document.getElementById('cr-strengths');
-  st.innerHTML='<div class="prose"><p style="margin-bottom:20px">What the stars built into this connection — the parts that can carry you through anything.</p></div>';
-  (data.strengths||[]).forEach(function(s){
-    st.innerHTML+='<div class="strength-box"><div class="strength-title">💚 '+esc(s.title||'')+'</div><div class="strength-text">'+esc(s.description||'')+'</div></div>';
-  });
-
-  document.getElementById('cr-advice').innerHTML=prose(data.advice||'');
-
-  document.querySelectorAll('.ctab').forEach(function(t){t.classList.remove('on')});
-  document.querySelectorAll('.csec').forEach(function(s){s.classList.remove('on')});
-  document.querySelector('.ctab[data-csec="overview"]').classList.add('on');
-  document.getElementById('csec-overview').classList.add('on');
-  show('sCompatResult');
-}
-
-document.addEventListener('click',function(e){ if(!e.target || e.target.id!=='btnRunCompat') return; (function(){
-  var p1={name:(document.getElementById('c1Name').value.trim())||'Person 1',dob:parseDob(document.getElementById('c1Dob').value),time:readTime('c1Time'),city:(document.getElementById('c1City').value.trim())||'Unknown'};
-  var p2={name:(document.getElementById('c2Name').value.trim())||'Person 2',dob:parseDob(document.getElementById('c2Dob').value),time:readTime('c2Time'),city:(document.getElementById('c2City').value.trim())||'Unknown'};
-  if(!p1.dob||p1.dob.length<8||!p2.dob||p2.dob.length<8){alert('Please enter the date of birth for both people (MM/DD/YYYY).');return;}
-
-  show('sLoad');
-  document.getElementById('lNameTxt').textContent=p1.name+' & '+p2.name;
-  document.getElementById('lErr').style.display='none';
-
-  // reset loading steps
-  ['ls1','ls2','ls3','ls4','ls5'].forEach(function(id){
-    var el=document.getElementById(id);
-    el.classList.remove('on','done');
-    el.querySelector('.ldot').textContent='◌';
-  });
-
-  var stepsDone=false,apiDone=false,apiResult=null,apiError=null;
-
-  function tryRC(){
-    if(!stepsDone||!apiDone) return;
-    if(apiError){document.getElementById('lErr').textContent='Error: '+apiError;document.getElementById('lErr').style.display='block';return;}
-    try{
-      var raw=apiResult.replace(/```json[\s\S]?/g,'').replace(/```[\s\S]?/g,'').trim();
-      renderCompatResult(p1,p2,JSON.parse(raw));
-    }catch(e){document.getElementById('lErr').textContent='Could not parse reading. Please try again.';document.getElementById('lErr').style.display='block';}
-  }
-
-  runLoadingSteps(p1.name+' & '+p2.name,function(){stepsDone=true;tryRC();});
-  callClaude(buildCompatPrompt(p1,p2),function(t){apiResult=t;apiDone=true;tryRC();},function(e){apiError=e;apiDone=true;tryRC();});
-  })();
-});
-</script>
-
 </body>
 </html>
